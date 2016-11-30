@@ -1,5 +1,8 @@
 package resolution;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,39 +10,86 @@ public class ConvertCnf {
 	private String[] resolution_input;
 	private int n;
 	public String[] kb;
-	public int count=0;
+	public int count = 0;
+	HashTableStorage h1 = new HashTableStorage(resolution_input, n);
 
 	public ConvertCnf(String[] resolution_input, int n) {
 		this.resolution_input = resolution_input;
 		this.n = n;
 	}
 
-	public void computeCnf() {
+	public void computeCnf() throws IOException {
 		int nq = Integer.parseInt(resolution_input[0]);
-		
-		HashTableStorage h1 = new HashTableStorage(resolution_input,n);
 		for (int i = (2 + nq); i < resolution_input.length; i++) {
 			count++;
-			// System.out.println(resolution_input[i]);
 			String step1 = implicationElimination(resolution_input[i]);
 			String step2 = negationElimination(step1);
 			String step21 = removeRedundantBraces(step2);
-			// System.out.println(step21);
 			String step4 = distributeAndOverOr(step21);
 			String step5 = standardize(step4);
-			 System.out.println(step5);
+			step5=step5.replaceAll("\\s+","");
+			// System.out.println(step5);
 			h1.tell(step5);
 		}
-		
+		addContradiction();
+	}
 
+	public void addContradiction() throws IOException {
+		BufferedWriter out = new BufferedWriter(new FileWriter("output.txt"));
+		int no_of_queries = Integer.parseInt(resolution_input[0]);
+
+		for (int i = 1; i <= no_of_queries; i++) {
+			String step0 = "(" + "~" + "(" + resolution_input[i] + ")" + ")";
+			count++;
+			String step1 = implicationElimination(step0);
+			String step2 = negationElimination(step1);
+			String step21 = removeRedundantBraces(step2);
+			String step4 = distributeAndOverOr(step21);
+			String step5 = standardize(step4);
+			step5=step5.replaceAll("\\s+","");
+			String result=resolveFact(step5);
+			System.out.println(result);
+			out.write(result);
+			out.newLine();
+		}
+		out.close();
+	}
+
+	public String resolveFact(String s1) throws IOException {
+		BufferedWriter out = new BufferedWriter(new FileWriter("output.txt"));
+		List<String> d = new ArrayList<>();
+		List<String> d1 = new ArrayList<>();
+//			for (int q = 0; q < h1.kb.size(); q++)
+//			d.add(h1.kb.get(q));
+			for (int q = 0; q < h1.kb.size(); q++)
+			d1.add(h1.kb.get(q));
+//			d.add(s1);
+			d1.add(s1);
+			for (int x = 0; x < d1.size(); x++) {
+				for (int j = 0; j < d1.get(x).length(); j++)
+					if (d1.get(x).charAt(j) == '|') {
+						String temp = d1.get(x);
+						temp = "(" + temp + ")";
+						d1.remove(x);
+						d1.add(x, temp);
+						break;
+					}
+			}
+			HashTableStorage h2 = new HashTableStorage();
+			for (int i = 0; i < d1.size(); i++) {
+				h2.tell(d1.get(i));
+			}
+			Resolution r = new Resolution(h2);
+			String result = r.resolve();
+			return result;
+			
 	}
 
 	public String standardize(String s1) {
 		String s2 = "";
-		int flagand = 0, flagor = 0,andcount=0;
+		int flagand = 0, flagor = 0, andcount = 0;
 		for (int i = 0; i < s1.length(); i++)
-			if (s1.charAt(i) == '&')
-			{
+			if (s1.charAt(i) == '&') {
 				flagand = 1;
 				andcount++;
 			}
@@ -47,119 +97,118 @@ public class ConvertCnf {
 			if (s1.charAt(i) == '|')
 				flagor = 1;
 		if (flagand == 0 && flagor == 0) {
-			int flag=0,flag1=0;
-			for(int j=0;j<s1.length();)
-			{
-				if(Character.isLowerCase(s1.charAt(j)))
-				{
-					if(Character.isUpperCase(s1.charAt(j-1)))
-					{
-						flag1=1;
+			int flag = 0, flag1 = 0;
+			for (int j = 0; j < s1.length();) {
+				if (Character.isLowerCase(s1.charAt(j))) {
+					if (Character.isUpperCase(s1.charAt(j - 1))) {
+						flag1 = 1;
 					}
-					flag=1;
+					flag = 1;
 					j++;
 					continue;
 				}
-				if((s1.charAt(j)==')' || s1.charAt(j)==',') && flag==1 && flag1!=1)
-				{
-					int temp=s1.length();
-					s1=s1.substring(0,j)+count+s1.substring(j,temp);
-					j=j+2;
-					s2=s1;
-				}
-				else
+				if ((s1.charAt(j) == ')' || s1.charAt(j) == ',') && flag == 1 && flag1 != 1) {
+					int temp = s1.length();
+					s1 = s1.substring(0, j) + count + s1.substring(j, temp);
+					j = j + 2;
+					s2 = s1;
+				} else
 					j++;
 			}
-		}
-		else if (flagand == 0 && flagor == 1)
-		{
-			int flag=0;
-			for(int j=0;j<s1.length();)
-			{
-				if(Character.isLowerCase(s1.charAt(j)))
-				{
-					flag=1;
+		} else if (flagand == 0 && flagor == 1) {
+			int flag = 0, bc = 0, constant = 0;
+			for (int j = 0; j < s1.length();) {
+				if (s1.charAt(j) == '(') {
+					bc++;
+				}
+				if (bc > 1 && Character.isUpperCase(s1.charAt(j))) {
+					constant = 1;
+				}
+				if (Character.isLowerCase(s1.charAt(j))) {
+					flag = 1;
 					j++;
 					continue;
-				}
-				else if((s1.charAt(j)==')' || s1.charAt(j)==',') && flag==1)
-				{
-					int temp=s1.length();
-					s1=s1.substring(0,j)+count+s1.substring(j,temp);
-					j=j+2;
-					s2=s1;
-					flag=0;
-				}
-				else
+				} else if ((s1.charAt(j) == ')' || s1.charAt(j) == ',') && flag == 1 && constant == 0) {
+					int temp = s1.length();
+					if (s1.charAt(j) == ')')
+						bc--;
+					s1 = s1.substring(0, j) + count + s1.substring(j, temp);
+					j = j + 2;
+					s2 = s1;
+					flag = 0;
+
+				} else if ((s1.charAt(j) == ')' || s1.charAt(j) == ',') && flag == 1 && constant == 1) {
+					if (s1.charAt(j) == ')')
+						bc--;
+					j++;
+					s2 = s1;
+					flag = 0;
+					constant = 0;
+
+				} else
 					j++;
 			}
-		}
-		else if(flagand == 1 && flagor == 0)
-		{
-			int flag=0;
-			for(int j=0;j<s1.length();)
-			{
-				if(Character.isLowerCase(s1.charAt(j)))
-				{
-					flag=1;
+		} else if (flagand == 1 && flagor == 0) {
+			int flag = 0, bc = 0, constant = 0;
+			for (int j = 0; j < s1.length();) {
+				if (s1.charAt(j) == '(')
+					bc = 1;
+				if (bc == 1 && Character.isUpperCase(s1.charAt(j))) {
+					constant = 1;
+				}
+				if (Character.isLowerCase(s1.charAt(j))) {
+					flag = 1;
 					j++;
 					continue;
-				}
-				if((s1.charAt(j)==')' || s1.charAt(j)==',') && flag==1)
-				{
-					int temp=s1.length();
-					if(s1.charAt(j)==',')
-					{
-					s1=s1.substring(0,j)+count+s1.substring(j,temp);
+				} else if ((s1.charAt(j) == ')' || s1.charAt(j) == ',') && flag == 1 && constant == 0) {
+					int temp = s1.length();
+					if (s1.charAt(j) == ',') {
+						s1 = s1.substring(0, j) + count + s1.substring(j, temp);
 					}
-					if(s1.charAt(j)==')')
-					{
-					s1=s1.substring(0,j)+count+s1.substring(j,temp);
-					count++;
+					if (s1.charAt(j) == ')') {
+						s1 = s1.substring(0, j) + count + s1.substring(j, temp);
+						count++;
 					}
-					j=j+2;
-					s2=s1;
-					flag=0;
-				}
-				else
+					j = j + 2;
+					s2 = s1;
+					flag = 0;
+				} else if ((s1.charAt(j) == ')' || s1.charAt(j) == ',') && flag == 1 && constant == 0) {
+					if (s1.charAt(j) == ')')
+						bc = 0;
+					j++;
+					s2 = s1;
+					flag = 0;
+					constant = 0;
+				} else
 					j++;
 			}
 			count--;
-		}
-		else if(flagand == 1 && flagor == 1)
-		{
+		} else if (flagand == 1 && flagor == 1) {
 			count--;
-			for(int i=0;i<s1.length();)
-			{
-				int s=-1,f=-1;
-				if(s1.charAt(i)=='&' && andcount!=0)
-				{
+			for (int i = 0; i < s1.length();) {
+				int s = -1, f = -1;
+				if (s1.charAt(i) == '&' && andcount != 0) {
 					andcount--;
-					for(int k=i-1;k>=0;k--)
-					{
-						if(s1.charAt(k)==')')
-						{
-							int c=0;
-							f=k+1;
-							for(int j=k-1;j>=0;j--)
-							{
-								if(s1.charAt(j)==')')
+					for (int k = i - 1; k >= 0; k--) {
+						if (s1.charAt(k) == ')') {
+							int c = 0;
+							f = k + 1;
+							for (int j = k - 1; j >= 0; j--) {
+								if (s1.charAt(j) == ')')
 									c++;
-								if(s1.charAt(j)=='(')
+								if (s1.charAt(j) == '(')
 									c--;
-								if(c<0)
-								{
-									s=j;
+								if (c < 0) {
+									s = j;
 									count++;
-									String s3=standardize(s1.substring(s,f));
-									int temp=s1.length();
+									String s3 = standardize(s1.substring(s, f));
+									int temp = s1.length();
 									s3.trim();
-									int t=s1.substring(0,s).length()+s3.length();
-									s1=s1.substring(0,s)+s3+s1.substring(f,temp);
-									for(int m=t;m<s1.length();m++)
-										if(s1.charAt(m)=='&')
-										{
-											i=m+1;
+									int t = s1.substring(0, s).length() + s3.length();
+									s1 = s1.substring(0, s) + s3 + s1.substring(f, temp);
+									for (int m = t; m < s1.length(); m++)
+										if (s1.charAt(m) == '&') {
+											i = m + 1;
 											break;
 										}
 									break;
@@ -168,39 +217,31 @@ public class ConvertCnf {
 							break;
 						}
 					}
-				}
-				else if(andcount==0)
-				{
-					for(int k=i;k<s1.length();k++)
-					{
-						if(s1.charAt(k)=='(')
-						{
-							int c=0;
-							s=k;
-							for(int j=k+1;j<s1.length();j++)
-							{
-								if(s1.charAt(j)=='(')
+				} else if (andcount == 0) {
+					for (int k = i; k < s1.length(); k++) {
+						if (s1.charAt(k) == '(') {
+							int c = 0;
+							s = k;
+							for (int j = k + 1; j < s1.length(); j++) {
+								if (s1.charAt(j) == '(')
 									c++;
-								if(s1.charAt(j)==')')
+								if (s1.charAt(j) == ')')
 									c--;
-								if(c<0)
-								{
-									f=j+1;
+								if (c < 0) {
+									f = j + 1;
 									count++;
-									String s3=standardize(s1.substring(s,f));
+									String s3 = standardize(s1.substring(s, f));
 									s3.trim();
-									int temp=s1.length();
-									s1=s1.substring(0,s)+s3+s1.substring(f,temp);
-									i=s1.length();
+									int temp = s1.length();
+									s1 = s1.substring(0, s) + s3 + s1.substring(f, temp);
+									i = s1.length();
 									break;
 								}
 							}
 							break;
 						}
 					}
-				}
-				else
-				{
+				} else {
 					i++;
 				}
 			}

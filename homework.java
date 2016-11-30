@@ -29,7 +29,7 @@ public class homework {
 		c1.computeCnf();
 		long endTime = System.currentTimeMillis();
 		long totalTime = endTime - startTime;
-		System.out.println(totalTime);
+//		System.out.println(totalTime);
 	}
 
 }

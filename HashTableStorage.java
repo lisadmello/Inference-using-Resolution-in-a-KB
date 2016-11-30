@@ -9,8 +9,12 @@ import java.util.List;
 
 public class HashTableStorage {
 	Map<String, List<HashTableColumns>> hashmap = new HashMap<String, List<HashTableColumns>>();
+	List<String> kb = new ArrayList<String>();
 	private String[] resolution_input;
 	private int n;
+	public HashTableStorage() {
+		int random=5;
+	}
 
 	public HashTableStorage(String[] resolution_input, int n) {
 		this.resolution_input = resolution_input;
@@ -189,7 +193,6 @@ public class HashTableStorage {
 							break;
 						}
 					}
-
 				}
 			}
 		}
@@ -199,13 +202,17 @@ public class HashTableStorage {
 		HashTableColumns h1 = new HashTableColumns(positive, negative, sentence);
 		if (hashmap.containsKey(key)) {
 			hashmap.get(key).add(h1);
-			for (int i = 1; i < hashmap.get(key).size(); i++)
-				System.out.println("key:" + key + " " + hashmap.get(key).get(i).sentence);
+			if(!kb.contains(sentence))
+				kb.add(sentence);
+//			for (int i = 1; i < hashmap.get(key).size(); i++)
+//				System.out.println("key:" + key + " " + hashmap.get(key).get(i).sentence);
 		} else {
 			List<HashTableColumns> htc = Collections.synchronizedList(new ArrayList<HashTableColumns>());
 			htc.add(h1);
 			hashmap.put(key, htc);
-			System.out.println("key:" + key + " " + hashmap.get(key).get(0).sentence);
+			if(!kb.contains(sentence))
+				kb.add(sentence);
+//			System.out.println("key:" + key + " " + hashmap.get(key).get(0).sentence);
 		}
 	}
 }
